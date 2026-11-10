@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d7f73" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Budget" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <title>Budget Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Passcode gate -->
+    <section id="lockView" class="lock" hidden>
+      <form id="lockForm" class="card lock-card" autocomplete="off">
+        <h1>Budget Tracker</h1>
+        <label for="passInput">Passcode</label>
+        <input id="passInput" type="password" inputmode="numeric" autocomplete="off" required />
+        <p id="lockError" class="error" role="alert" hidden></p>
+        <button type="submit" class="primary">Unlock</button>
+      </form>
+    </section>
+
+    <div id="appView" hidden>
+      <header class="topbar">
+        <h1>Budget Tracker</h1>
+        <span id="statusChip" class="chip" aria-live="polite">Loading</span>
+      </header>
+
+      <main class="container">
+        <p id="loadError" class="error" role="alert" hidden></p>
+        <!-- Dashboard -->
+        <section id="tab-week" class="tab">
+          <div class="card summary">
+            <div class="week-nav">
+              <button id="prevWeek" class="icon-btn" aria-label="Previous week">&lsaquo;</button>
+              <div class="week-label">
+                <strong id="weekLabel"></strong>
+                <button id="thisWeek" class="link-btn" hidden>Back to this week</button>
+              </div>
+              <button id="nextWeek" class="icon-btn" aria-label="Next week">&rsaquo;</button>
+            </div>
+            <div class="totals">
+              <div><span class="muted">Spent</span><strong id="spentValue">$0.00</strong></div>
+              <div><span class="muted">Limit</span><button id="capBtn" class="link-btn big" aria-label="Edit weekly limit">$0.00</button></div>
+              <div><span class="muted" id="remainingLabel">Remaining</span><strong id="remainingValue">$0.00</strong></div>
+            </div>
+            <div class="meter" aria-hidden="true"><div id="meterFill" class="meter-fill"></div></div>
+          </div>
+
+          <div id="dayList" class="day-list"></div>
+          <button id="fabAdd" class="fab" aria-label="Add expense">+</button>
+        </section>
+
+        <!-- History -->
+        <section id="tab-history" class="tab" hidden>
+          <div class="card">
+            <h2>History</h2>
+            <p class="muted">Running balance: <strong id="runningValue">$0.00</strong> <span id="runningHint" class="muted"></span></p>
+            <div id="historyChart" class="history-chart"></div>
+          </div>
+          <div class="card table-wrap">
+            <table>
+              <thead><tr><th>Week of</th><th>Spent</th><th>Limit</th><th>Diff</th><th>Running</th></tr></thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tabbar">
+        <button class="tab-btn active" data-tab="week">This week</button>
+        <button class="tab-btn" data-tab="history">History</button>
+      </nav>
+    </div>
+
+    <!-- Add expense -->
+    <dialog id="addDialog">
+      <form id="addForm" method="dialog" class="sheet">
+        <h2>Add expense</h2>
+        <label>Amount
+          <input id="addAmount" type="number" inputmode="decimal" step="0.01" min="0.01" required />
+        </label>
+        <button id="scanReceiptBtn" type="button" class="secondary">Scan receipt</button>
+        <input id="receiptFile" type="file" accept="image/*" capture="environment" hidden />
+        <p id="receiptStatus" class="muted" role="status" aria-live="polite" hidden></p>
+        <div id="receiptSuggestions" class="receipt-suggestions" aria-label="Receipt total suggestions" hidden></div>
+        <div class="chips" id="addNotes" role="group" aria-label="Quick notes"></div>
+        <label>Note
+          <input id="addNote" type="text" maxlength="120" placeholder="Optional" />
+        </label>
+        <div class="row">
+          <label>Date <input id="addDate" type="date" required /></label>
+          <label>Who
+            <select id="addUser"></select>
+          </label>
+        </div>
+        <p id="addError" class="error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" class="secondary" data-close>Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Day detail -->
+    <dialog id="dayDialog">
+      <div class="sheet">
+        <h2 id="dayTitle"></h2>
+        <p class="muted">Day total: <strong id="dayTotal"></strong></p>
+        <ul id="dayEntries" class="entries"></ul>
+        <div class="actions">
+          <button type="button" class="secondary" data-close>Close</button>
+          <button type="button" id="dayAdjustBtn" class="primary">Add adjustment</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Adjustment -->
+    <dialog id="adjDialog">
+      <form id="adjForm" method="dialog" class="sheet">
+        <h2>Add adjustment</h2>
+        <label>Date <input id="adjDate" type="date" required /></label>
+        <div class="segmented" role="group" aria-label="Adjustment type">
+          <label><input type="radio" name="adjType" value="add" checked /> Add</label>
+          <label><input type="radio" name="adjType" value="subtract" /> Subtract</label>
+        </div>
+        <label>Amount
+          <input id="adjAmount" type="number" inputmode="decimal" step="0.01" min="0.01" required />
+        </label>
+        <label>Reason
+          <input id="adjNote" type="text" maxlength="120" required />
+        </label>
+        <label>Who
+          <select id="adjUser"></select>
+        </label>
+        <p id="adjError" class="error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" class="secondary" data-close>Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Weekly limit -->
+    <dialog id="capDialog">
+      <form id="capForm" method="dialog" class="sheet">
+        <h2>Weekly limit</h2>
+        <label>Limit per week
+          <input id="capInput" type="number" inputmode="decimal" step="0.01" min="0" required />
+        </label>
+        <p class="muted">Applies from the week being viewed onward. Earlier weeks keep their own limit.</p>
+        <p id="capError" class="error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" class="secondary" data-close>Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
