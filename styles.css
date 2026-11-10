@@ -44,6 +44,17 @@ h2 { font-size: 1.1rem; margin-bottom: 8px; }
 button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; min-height: 44px; padding: 0 16px; }
 button.primary { background: var(--accent); color: #fff; font-weight: 600; }
 button.secondary { background: #e9eff0; color: var(--text); }
+button:disabled { cursor: not-allowed; opacity: .65; }
+button.is-loading::before, .chip.is-loading::before {
+  content: ""; display: inline-block; width: 14px; height: 14px;
+  margin-right: 8px; vertical-align: -2px; border: 2px solid currentColor;
+  border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  button.is-loading::before, .chip.is-loading::before { animation: none; }
+}
+.form-status { color: var(--accent); font-size: .9rem; margin: 0; }
 .link-btn { background: none; color: var(--accent); padding: 0; min-height: 32px; text-decoration: underline; }
 .link-btn.big { font-size: 1.15rem; font-weight: 700; text-decoration: none; border-bottom: 1px dashed var(--accent); border-radius: 0; }
 .icon-btn { background: #e9eff0; width: 44px; padding: 0; font-size: 1.6rem; line-height: 1; }

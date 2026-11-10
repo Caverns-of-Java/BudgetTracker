@@ -6,6 +6,7 @@
   const $ = (id) => document.getElementById(id);
 
   const state = { entries: [], caps: [], weekStart: mondayOf(todayStr()), selectedDay: null };
+  let receiptScanning = false;
 
   // ---------- Dates (local timezone, YYYY-MM-DD strings) ----------
   function pad(n) { return String(n).padStart(2, "0"); }
@@ -58,6 +59,7 @@
     const chip = $("statusChip");
     chip.textContent = text;
     chip.classList.toggle("error-chip", !!isError);
+    chip.classList.toggle("is-loading", text === "Loading");
   }
 
   // ---------- Calculations ----------
@@ -190,6 +192,31 @@
     el.hidden = !msg;
   }
 
+  function beginFormRequest(form, message) {
+    if (form.dataset.busy === "true") return null;
+    form.dataset.busy = "true";
+    const controls = [...form.querySelectorAll("button, input, select")];
+    const disabled = controls.map((control) => control.disabled);
+    const submit = form.querySelector('button[type="submit"]');
+    const label = submit.textContent;
+    const status = form.querySelector(".form-status");
+    controls.forEach((control) => { control.disabled = true; });
+    submit.textContent = message;
+    submit.classList.add("is-loading");
+    status.textContent = message;
+    status.hidden = false;
+    return () => {
+      controls.forEach((control, index) => {
+        control.disabled = control.id === "scanReceiptBtn" ? receiptScanning : disabled[index];
+      });
+      submit.textContent = label;
+      submit.classList.remove("is-loading");
+      status.textContent = "";
+      status.hidden = true;
+      delete form.dataset.busy;
+    };
+  }
+
   function openAdd(date = todayStr()) {
     $("addForm").reset();
     $("addDate").value = date;
@@ -237,6 +264,7 @@
       return;
     }
 
+    receiptScanning = true;
     scanButton.disabled = true;
     status.textContent = "Preparing receipt scanner…";
     let worker;
@@ -281,7 +309,8 @@
         suggestions.hidden = true;
         status.textContent = "Receipt scanner cleanup failed. Reload the app before scanning again.";
       } finally {
-        scanButton.disabled = false;
+        receiptScanning = false;
+        scanButton.disabled = $("addForm").dataset.busy === "true";
       }
     }
   }
@@ -324,8 +353,8 @@
   }
 
   async function submitEntry(form, entry, errorId, dialog) {
-    const buttons = form.querySelectorAll("button");
-    buttons.forEach((b) => (b.disabled = true));
+    const finish = beginFormRequest(form, "Saving…");
+    if (!finish) return;
     showError(errorId);
     try {
       const data = await api("add", { entry });
@@ -337,7 +366,7 @@
     } catch (err) {
       handleError(err, errorId);
     } finally {
-      buttons.forEach((b) => (b.disabled = false));
+      finish();
     }
   }
 
@@ -356,7 +385,14 @@
       b.addEventListener("click", () => b.closest("dialog").close())
     );
     document.querySelectorAll("dialog").forEach((d) =>
-      d.addEventListener("click", (e) => { if (e.target === d) d.close(); })
+      {
+        d.addEventListener("click", (e) => {
+          if (e.target === d && !d.querySelector('form[data-busy="true"]')) d.close();
+        });
+        d.addEventListener("cancel", (e) => {
+          if (d.querySelector('form[data-busy="true"]')) e.preventDefault();
+        });
+      }
     );
 
     $("prevWeek").addEventListener("click", () => { state.weekStart = addDays(state.weekStart, -7); renderWeek(); });
@@ -398,6 +434,7 @@
 
     $("addForm").addEventListener("submit", (e) => {
       e.preventDefault();
+      if (e.target.dataset.busy === "true") return;
       const amount = parseFloat($("addAmount").value);
       if (!(amount > 0)) return showError("addError", "Enter an amount above 0.");
       submitEntry(
@@ -416,6 +453,7 @@
 
     $("adjForm").addEventListener("submit", (e) => {
       e.preventDefault();
+      if (e.target.dataset.busy === "true") return;
       const raw = parseFloat($("adjAmount").value);
       if (!(raw > 0)) return showError("adjError", "Enter an amount above 0.");
       const sign = e.target.elements.adjType.value === "subtract" ? -1 : 1;
@@ -435,8 +473,12 @@
 
     $("capForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (e.target.dataset.busy === "true") return;
       const cap = parseFloat($("capInput").value);
       if (!(cap >= 0)) return showError("capError", "Enter a valid limit.");
+      const finish = beginFormRequest(e.target, "Saving…");
+      if (!finish) return;
+      showError("capError");
       try {
         const data = await api("setCap", { effectiveWeek: state.weekStart, cap });
         state.caps = data.caps;
@@ -444,6 +486,8 @@
         render();
       } catch (err) {
         handleError(err, "capError");
+      } finally {
+        finish();
       }
     });
   }
@@ -491,6 +535,8 @@
 
     $("lockForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const finish = beginFormRequest(e.target, "Unlocking…");
+      if (!finish) return;
       showError("lockError");
       try {
         const hash = await sha256($("passInput").value.trim());
@@ -502,6 +548,8 @@
         load();
       } catch (err) {
         showError("lockError", err.code === "unauthorized" ? "Wrong passcode." : err.message);
+      } finally {
+        finish();
       }
     });
 

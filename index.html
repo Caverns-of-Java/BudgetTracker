@@ -22,6 +22,7 @@
         <label for="passInput">Passcode</label>
         <input id="passInput" type="password" inputmode="numeric" autocomplete="off" required />
         <p id="lockError" class="error" role="alert" hidden></p>
+        <p class="form-status" role="status" aria-live="polite" hidden></p>
         <button type="submit" class="primary">Unlock</button>
       </form>
     </section>
@@ -29,7 +30,7 @@
     <div id="appView" hidden>
       <header class="topbar">
         <h1>Budget Tracker</h1>
-        <span id="statusChip" class="chip" aria-live="polite">Loading</span>
+        <span id="statusChip" class="chip is-loading" aria-live="polite">Loading</span>
       </header>
 
       <main class="container">
@@ -101,6 +102,7 @@
           </label>
         </div>
         <p id="addError" class="error" role="alert" hidden></p>
+        <p class="form-status" role="status" aria-live="polite" hidden></p>
         <div class="actions">
           <button type="button" class="secondary" data-close>Cancel</button>
           <button type="submit" class="primary">Save</button>
@@ -140,6 +142,7 @@
           <select id="adjUser"></select>
         </label>
         <p id="adjError" class="error" role="alert" hidden></p>
+        <p class="form-status" role="status" aria-live="polite" hidden></p>
         <div class="actions">
           <button type="button" class="secondary" data-close>Cancel</button>
           <button type="submit" class="primary">Save</button>
@@ -156,6 +159,7 @@
         </label>
         <p class="muted">Applies from the week being viewed onward. Earlier weeks keep their own limit.</p>
         <p id="capError" class="error" role="alert" hidden></p>
+        <p class="form-status" role="status" aria-live="polite" hidden></p>
         <div class="actions">
           <button type="button" class="secondary" data-close>Cancel</button>
           <button type="submit" class="primary">Save</button>
